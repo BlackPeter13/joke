@@ -1,0 +1,24 @@
+{
+  "proxyPort": 3333,
+  "metricsPort": 3000,
+  "pools": [
+    {
+      "host": "stratum.slushpool.com",
+      "port": 3333,
+      "healthy": true,
+      "weight": 1
+    },
+    {
+      "host": "stratum.btc.com",
+      "port": 3333,
+      "healthy": true,
+      "weight": 1
+    },
+    {
+      "host": "pool.bitcoin.com",
+      "port": 3333,
+      "healthy": true,
+      "weight": 1
+    }
+  ]
+}
