@@ -104,9 +104,9 @@ class StratumValidator {
 class MiningProxy {
   constructor() {
     this.bufferMap = new Map();
+    this.server = net.createServer(this.handleConnection.bind(this));
     this.initHealthChecks();
     this.metricsServer = this.initMetrics();
-    this.server = net.createServer(this.handleConnection.bind(this));
   }
 
   initHealthChecks() {
@@ -124,13 +124,20 @@ class MiningProxy {
   initMetrics() {
     const app = express();
     app.get('/metrics', (req, res) => {
-      res.json({
-        connections: this.server.connections,
-        pools: POOLS.map(p => ({
-          host: p.host,
-          healthy: p.healthy,
-          connections: p.connections || 0
-        }))
+      this.server.getConnections((err, count) => {
+        if (err) {
+          logger.error('Error getting connection count:', err);
+          return res.status(500).json({ error: 'Failed to get connections' });
+        }
+
+        res.json({
+          proxyConnections: count,
+          pools: POOLS.map(p => ({
+            host: p.host,
+            healthy: p.healthy,
+            connections: p.connections || 0
+          }))
+        });
       });
     });
     return app.listen(METRICS_PORT);
@@ -138,7 +145,11 @@ class MiningProxy {
 
   handleConnection(minerSocket) {
     const pool = this.getHealthyPool();
-    if (!pool) return minerSocket.end('No pools available');
+    
+    if (!pool) {
+      minerSocket.end('No pools available');
+      return;
+    }
 
     const poolSocket = net.connect(pool);
     pool.connections = (pool.connections || 0) + 1;
@@ -170,9 +181,11 @@ class MiningProxy {
 
   setupErrorHandling(miner, pool, poolConfig) {
     const cleanup = () => {
-      poolConfig.connections--;
+      poolConfig.connections = Math.max(0, (poolConfig.connections || 0) - 1);
       miner.destroy();
       pool.destroy();
+      this.bufferMap.delete(miner);
+      this.bufferMap.delete(pool);
     };
 
     miner.on('error', cleanup);
