@@ -1,0 +1,13 @@
+{
+  "name": "mining-proxy",
+  "version": "1.0.0",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "net": "^1.0.2",
+    "express": "^4.18.2",
+    "winston": "^3.11.0"
+  }
+}
